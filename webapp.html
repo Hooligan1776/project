@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diamond Breakout</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* General body styling */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #0a0a1a; /* Dark space blue */
+            margin: 0;
+            font-family: 'Press Start 2P', cursive;
+            color: #fff;
+            flex-direction: column; /* Stack elements vertically */
+            overflow: hidden; /* Prevent scrollbars */
+        }
+
+        /* Game container styling */
+        #gameContainer {
+            display: flex; /* Use flexbox for centering canvas */
+            justify-content: center;
+            align-items: center;
+            border: 3px solid #eee;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            background: linear-gradient(180deg, #000010, #101030); /* Dark space gradient */
+            position: relative; /* Needed for absolute positioning of overlays */
+            width: 95%;
+            max-width: 800px; /* Max width for larger screens */
+            aspect-ratio: 4 / 3; /* Maintain aspect ratio */
+        }
+
+        /* Canvas styling */
+        canvas {
+            display: block;
+            background-color: transparent; /* See through to container background */
+            border-radius: 8px; /* Match container */
+            width: 100%;
+            height: 100%;
+        }
+
+        /* General button styling */
+        button {
+            font-family: 'Press Start 2P', cursive;
+            padding: 12px 25px; /* Slightly larger padding */
+            font-size: 1em; /* Relative font size */
+            cursor: pointer;
+            background: linear-gradient(145deg, #555, #333);
+            color: #fff;
+            border: 2px solid #888;
+            border-radius: 8px;
+            box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.5),
+                        inset 1px 1px 2px rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            margin-top: 15px; /* Add some space above buttons */
+        }
+
+        button:hover {
+            background: linear-gradient(145deg, #666, #444);
+            box-shadow: 4px 4px 7px rgba(0, 0, 0, 0.6),
+                        inset 1px 1px 3px rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            background: linear-gradient(145deg, #444, #222);
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5),
+                        inset 1px 1px 2px rgba(0, 0, 0, 0.8);
+            transform: translateY(1px);
+        }
+
+        /* Overlay base style (for menu and message box) */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 10, 0.85); /* Dark semi-transparent background */
+            color: #fff;
+            display: flex; /* Use flexbox for centering */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border-radius: 8px; /* Match container */
+            z-index: 10;
+            padding: 20px;
+            box-sizing: border-box; /* Include padding in width/height */
+        }
+
+        /* Main Menu specific styles */
+        #mainMenu {
+             /* Uses .overlay styles */
+             display: flex; /* Initially visible */
+        }
+        #mainMenu h1 {
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 5px rgba(0,0,0,0.7);
+        }
+        #difficultySelection label {
+            display: block; /* Each difficulty on its own line */
+            margin: 15px 0;
+            font-size: 1.2em;
+            cursor: pointer;
+        }
+         #difficultySelection input[type="radio"] {
+            margin-right: 10px;
+            /* Optional: Style radio buttons if desired, can be complex */
+            transform: scale(1.5); /* Make radio buttons slightly larger */
+            cursor: pointer;
+         }
+
+
+        /* Message Box specific styles */
+        #messageBox {
+            /* Uses .overlay styles */
+            display: none; /* Hidden by default */
+            font-size: 1.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+        }
+        #messageText {
+            margin-bottom: 20px;
+        }
+
+
+        /* Star background effect */
+        body::before, body::after {
+            content: '';
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            background: white;
+            box-shadow:
+                50vw 30vh 1px 1px #fff, 10vw 80vh 0px 0px #fff,
+                80vw 10vh 1px 0px #fff, 30vw 50vh 0px 1px #fff,
+                90vw 60vh 1px 1px #fff, 40vw 20vh 0px 0px #fff,
+                65vw 90vh 1px 0px #fff, 5vw 5vh 0px 1px #fff,
+                25vw 75vh 1px 1px #fff, 75vw 25vh 0px 0px #fff;
+            animation: twinkle 5s infinite linear;
+            z-index: -1;
+        }
+         body::after {
+            box-shadow:
+                15vw 40vh 1px 1px #fff, 70vw 70vh 0px 0px #fff,
+                95vw 30vh 1px 0px #fff, 5vw 95vh 0px 1px #fff,
+                55vw 15vh 1px 1px #fff, 85vw 85vh 0px 0px #fff,
+                35vw 65vh 1px 0px #fff, 45vw 5vh 0px 1px #fff;
+            animation: twinkle 7s infinite linear;
+            z-index: -1;
+         }
+
+        @keyframes twinkle {
+            0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            button { font-size: 0.8em; padding: 10px 20px; }
+            #mainMenu h1 { font-size: 1.5em; margin-bottom: 20px;}
+            #difficultySelection label { font-size: 1em; margin: 10px 0;}
+            #messageBox { font-size: 1.2em; }
+        }
+         @media (max-width: 400px) {
+             button { font-size: 0.7em; padding: 8px 15px; }
+             #mainMenu h1 { font-size: 1.2em; margin-bottom: 15px;}
+             #difficultySelection label { font-size: 0.9em; margin: 8px 0;}
+             #messageBox { font-size: 1em; }
+         }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="mainMenu" class="overlay">
+            <h1>Diamond Breakout</h1>
+            <div id="difficultySelection">
+                <label>
+                    <input type="radio" name="difficulty" value="easy" checked> Easy
+                </label>
+                <label>
+                    <input type="radio" name="difficulty" value="medium"> Medium
+                </label>
+                <label>
+                    <input type="radio" name="difficulty" value="hard"> Hard
+                </label>
+            </div>
+            <button id="startGameBtn">Start Game</button>
+        </div>
+
+        <div id="messageBox" class="overlay">
+            <div id="messageText"></div>
+            <button id="backToMenuBtn">Back to Menu</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameContainer = document.getElementById('gameContainer');
+        const mainMenu = document.getElementById('mainMenu');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const backToMenuBtn = document.getElementById('backToMenuBtn');
+        const difficultyRadios = document.querySelectorAll('input[name="difficulty"]');
+
+        // --- Game Configuration ---
+        const PADDLE_HEIGHT = 15;
+        const PADDLE_WIDTH_PERCENT = 0.15; // 15% of canvas width
+        const BALL_RADIUS = 8;
+        const BLOCK_ROWS = 6;
+        const BLOCK_COLS = 10;
+        const BLOCK_PADDING = 4;
+        const BLOCK_MARGIN_TOP = 40;
+        const BLOCK_MARGIN_SIDES = 20;
+        const DIAMOND_SIZE = 25;
+        const BASE_SPEED = 3;
+
+        // --- Game State ---
+        let paddleWidth;
+        let paddleX;
+        let ball;
+        let blocks = [];
+        let diamond;
+        let score = 0;
+        let lives = 3; // Still here, but not explicitly displayed yet
+        let gameState = 'menu'; // 'menu', 'playing', 'gameOver', 'win'
+        let winAnimationActive = false;
+        let winAnimationTime = 0;
+        let selectedDifficulty = 'easy'; // Default difficulty
+        let difficultyMultiplier = 1;
+        let animationFrameId;
+
+        // --- Game Objects Creation (Functions remain largely the same) ---
+        function createBall(speedMultiplier) {
+            const speed = BASE_SPEED * speedMultiplier;
+            const angle = Math.random() * Math.PI / 2 + Math.PI / 4;
+            const startY = canvas.height - PADDLE_HEIGHT - BALL_RADIUS - 50;
+            return {
+                x: canvas.width / 2, y: startY, radius: BALL_RADIUS,
+                dx: Math.cos(angle) * speed, dy: Math.sin(angle) * speed,
+                speedMultiplier: speedMultiplier
+            };
+        }
+
+        function createBlocks() {
+            blocks = [];
+            const availableWidth = canvas.width - 2 * BLOCK_MARGIN_SIDES;
+            const blockWidth = (availableWidth - (BLOCK_COLS - 1) * BLOCK_PADDING) / BLOCK_COLS;
+            const blockHeight = 20;
+            for (let r = 0; r < BLOCK_ROWS; r++) {
+                blocks[r] = [];
+                for (let c = 0; c < BLOCK_COLS; c++) {
+                    const blockX = BLOCK_MARGIN_SIDES + c * (blockWidth + BLOCK_PADDING);
+                    const blockY = BLOCK_MARGIN_TOP + r * (blockHeight + BLOCK_PADDING);
+                    let toughness, color;
+                    if (r < 2) { toughness = 3; color = 'hsl(0, 70%, 50%)'; } // Red
+                    else if (r < 4) { toughness = 2; color = 'hsl(45, 70%, 50%)'; } // Orange/Yellow
+                    else { toughness = 1; color = 'hsl(120, 70%, 50%)'; } // Green
+                    blocks[r][c] = {
+                        x: blockX, y: blockY, width: blockWidth, height: blockHeight,
+                        toughness: toughness, initialToughness: toughness, color: color, visible: true
+                    };
+                }
+            }
+        }
+
+        function createDiamond() {
+            const diamondY = BLOCK_MARGIN_TOP - DIAMOND_SIZE - 10;
+            const diamondX = canvas.width / 2 - DIAMOND_SIZE / 2;
+            return { x: diamondX, y: diamondY, size: DIAMOND_SIZE, visible: true };
+        }
+
+        // --- Drawing Functions (Remain largely the same) ---
+        function drawPaddle() {
+            ctx.fillStyle = '#ccc';
+            ctx.beginPath();
+            ctx.roundRect(paddleX, canvas.height - PADDLE_HEIGHT, paddleWidth, PADDLE_HEIGHT, 5);
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawBall() {
+            if (!ball) return; // Don't draw if ball doesn't exist yet
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawBlocks() {
+            blocks.forEach(row => {
+                row.forEach(block => {
+                    if (block.visible) {
+                        const lightness = 30 + (block.toughness / block.initialToughness) * 40;
+                        const baseColor = block.color.match(/hsl\((\d+),/)[1];
+                        ctx.fillStyle = `hsl(${baseColor}, 70%, ${lightness}%)`;
+                        ctx.beginPath();
+                        ctx.roundRect(block.x, block.y, block.width, block.height, 3);
+                        ctx.fill();
+                        ctx.closePath();
+                    }
+                });
+            });
+        }
+
+        function drawDiamond() {
+            if (diamond && diamond.visible) {
+                ctx.save();
+                ctx.translate(diamond.x + diamond.size / 2, diamond.y + diamond.size / 2);
+                ctx.rotate(Math.PI / 4);
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
+                ctx.shadowBlur = 15;
+                ctx.fillRect(-diamond.size / 2, -diamond.size / 2, diamond.size, diamond.size);
+                ctx.restore();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function drawWinAnimation() {
+            if (!diamond) return; // Need diamond position
+            const lasers = 30;
+            const maxRadius = Math.max(canvas.width, canvas.height) * 1.5;
+            const progress = Math.min(winAnimationTime / 120, 1);
+            for (let i = 0; i < lasers; i++) {
+                const angle = (i / lasers) * Math.PI * 2 + (winAnimationTime * 0.05);
+                const currentRadius = maxRadius * progress * (0.5 + Math.random() * 0.5);
+                ctx.beginPath();
+                ctx.moveTo(diamond.x + diamond.size / 2, diamond.y + diamond.size / 2);
+                ctx.lineTo(
+                    diamond.x + diamond.size / 2 + Math.cos(angle) * currentRadius,
+                    diamond.y + diamond.size / 2 + Math.sin(angle) * currentRadius
+                );
+                ctx.strokeStyle = `hsl(${(winAnimationTime * 2 + i * 15) % 360}, 100%, 70%)`;
+                ctx.lineWidth = 2 + Math.random() * 3;
+                ctx.stroke();
+            }
+            winAnimationTime++;
+        }
+
+        // --- Collision Detection (Remains largely the same) ---
+        function detectCollisions() {
+            if (!ball) return; // Exit if ball doesn't exist
+
+            // Ball vs Walls
+            if (ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
+                ball.dx = -ball.dx;
+            }
+            if (ball.y + ball.dy < ball.radius) {
+                ball.dy = -ball.dy;
+            } else if (ball.y + ball.dy > canvas.height - ball.radius - PADDLE_HEIGHT) {
+                if (ball.x > paddleX && ball.x < paddleX + paddleWidth) {
+                    ball.y = canvas.height - PADDLE_HEIGHT - ball.radius;
+                    ball.dy = -ball.dy;
+                    let collidePoint = (ball.x - (paddleX + paddleWidth / 2)) / (paddleWidth / 2);
+                    let angleRad = collidePoint * (Math.PI / 3);
+                    const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+                    ball.dx = speed * Math.sin(angleRad);
+                    ball.dy = -speed * Math.cos(angleRad);
+                } else if (ball.y + ball.dy > canvas.height - ball.radius) {
+                    gameOver("You Lost!");
+                }
+            }
+
+            // Ball vs Blocks
+            blocks.forEach(row => {
+                row.forEach(block => {
+                    if (block.visible) {
+                        if (
+                            ball.x + ball.radius > block.x && ball.x - ball.radius < block.x + block.width &&
+                            ball.y + ball.radius > block.y && ball.y - ball.radius < block.y + block.height
+                        ) {
+                            ball.dy = -ball.dy;
+                            block.toughness--;
+                            if (block.toughness <= 0) {
+                                block.visible = false;
+                                score++;
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Ball vs Diamond
+            if (diamond && diamond.visible) {
+                const diamondCenterX = diamond.x + diamond.size / 2;
+                const diamondCenterY = diamond.y + diamond.size / 2;
+                const distX = Math.abs(ball.x - diamondCenterX);
+                const distY = Math.abs(ball.y - diamondCenterY);
+                if (distX < ball.radius + diamond.size / 2 && distY < ball.radius + diamond.size / 2) {
+                    winGame();
+                }
+            }
+        }
+
+        // --- Game Flow Control ---
+        function update() {
+            // Only update game logic if playing
+            if (gameState !== 'playing') return;
+
+            // Move ball
+            if (ball) {
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+            }
+
+            // Detect collisions
+            detectCollisions();
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw game elements only if not in menu
+            if (gameState !== 'menu') {
+                drawPaddle();
+                drawBlocks();
+                drawDiamond();
+                drawBall();
+            }
+
+            // Draw win animation if active
+            if (winAnimationActive) {
+                drawWinAnimation();
+            }
+            // Optionally draw a static background or title screen elements when in menu
+            // else if (gameState === 'menu') {
+            //    ctx.fillStyle = 'rgba(0,0,0,0.5)'; // Example: Dim the canvas slightly
+            //    ctx.fillRect(0,0,canvas.width, canvas.height);
+            // }
+        }
+
+        function gameLoop() {
+            // Update game logic
+            update();
+            // Draw current state
+            draw();
+
+            // Continue loop if playing or win animation is active
+            if (gameState === 'playing' || winAnimationActive) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            } else {
+                 cancelAnimationFrame(animationFrameId); // Stop loop if not playing/winning
+            }
+        }
+
+        function showMessage(msg) {
+            messageText.textContent = msg;
+            messageBox.style.display = 'flex'; // Show message overlay
+        }
+
+        function hideMessage() {
+            messageBox.style.display = 'none'; // Hide message overlay
+        }
+
+        function winGame() {
+            if (winAnimationActive || gameState !== 'playing') return;
+            console.log("Win triggered");
+            gameState = 'win'; // Set state
+            showMessage("You Win!");
+            winAnimationActive = true;
+            winAnimationTime = 0;
+            // Keep the loop running for the animation via gameLoop check
+            setTimeout(() => {
+                 winAnimationActive = false; // Stop animation after a delay
+                 // Message box with "Back to Menu" is already shown
+            }, 3000);
+        }
+
+        function gameOver(message) {
+             if (gameState !== 'playing') return; // Only trigger if playing
+             console.log("Game Over triggered");
+             gameState = 'gameOver'; // Set state
+             showMessage(message);
+             // Message box with "Back to Menu" is already shown
+        }
+
+        function startGame() {
+            // Get selected difficulty
+            const checkedRadio = document.querySelector('input[name="difficulty"]:checked');
+            selectedDifficulty = checkedRadio ? checkedRadio.value : 'easy';
+
+            switch (selectedDifficulty) {
+                case 'medium': difficultyMultiplier = 1.5; break;
+                case 'hard': difficultyMultiplier = 2; break;
+                default: difficultyMultiplier = 1; break; // Easy
+            }
+
+            mainMenu.style.display = 'none'; // Hide menu
+            hideMessage(); // Ensure message box is hidden
+            gameState = 'playing'; // Set state to playing
+            resetGame(); // Initialize game elements and start loop
+        }
+
+         function showMainMenu() {
+            hideMessage();
+            mainMenu.style.display = 'flex'; // Show menu
+            gameState = 'menu';
+            winAnimationActive = false; // Ensure win animation is off
+            cancelAnimationFrame(animationFrameId); // Stop game loop if it was somehow running
+            // Clear canvas or draw static menu background elements if desired
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // We might need to redraw placeholder elements if the game isn't running
+            // but resizeCanvas handles drawing initial state if needed.
+         }
+
+        function resetGame() {
+            // This function now primarily resets game elements for a new round
+            // It's called by startGame after setting the state and difficulty
+
+            score = 0;
+            lives = 3;
+            winAnimationActive = false;
+
+            // Ensure dimensions are correct (important if resized in menu)
+            paddleWidth = canvas.width * PADDLE_WIDTH_PERCENT;
+            paddleX = (canvas.width - paddleWidth) / 2;
+
+            ball = createBall(difficultyMultiplier);
+            createBlocks();
+            diamond = createDiamond();
+
+            // Start the game loop ONLY if the state is 'playing'
+            cancelAnimationFrame(animationFrameId); // Clear any previous loop
+            if (gameState === 'playing') {
+                 gameLoop();
+            }
+        }
+
+        // --- Event Listeners ---
+        function mouseMoveHandler(e) {
+            // Only move paddle if playing
+            if (gameState !== 'playing') return;
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const relativeX = (e.clientX - rect.left) * scaleX;
+
+            if (relativeX > 0 && relativeX < canvas.width) {
+                paddleX = relativeX - paddleWidth / 2;
+                if (paddleX < 0) paddleX = 0;
+                if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
+            }
+        }
+         function touchMoveHandler(e) {
+             // Only move paddle if playing
+             if (gameState !== 'playing') return;
+
+             if (e.touches.length > 0) {
+                 const touch = e.touches[0];
+                 const rect = canvas.getBoundingClientRect();
+                 const scaleX = canvas.width / rect.width;
+                 const relativeX = (touch.clientX - rect.left) * scaleX;
+
+                 if (relativeX > 0 && relativeX < canvas.width) {
+                     paddleX = relativeX - paddleWidth / 2;
+                     if (paddleX < 0) paddleX = 0;
+                     if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
+                 }
+             }
+         }
+
+        document.addEventListener('mousemove', mouseMoveHandler);
+        document.addEventListener('touchmove', touchMoveHandler, { passive: true });
+
+        // Menu button listeners
+        startGameBtn.addEventListener('click', startGame);
+        backToMenuBtn.addEventListener('click', showMainMenu);
+
+        // --- Resize Handling ---
+        function resizeCanvas() {
+            const containerWidth = gameContainer.clientWidth;
+            const containerHeight = gameContainer.clientHeight;
+            const aspectRatio = 4 / 3;
+            let newWidth = containerWidth;
+            let newHeight = containerWidth / aspectRatio;
+
+            if (newHeight > containerHeight) {
+                newHeight = containerHeight;
+                newWidth = newHeight * aspectRatio;
+            }
+
+            // Set internal canvas resolution (remains fixed)
+            canvas.width = 800;
+            canvas.height = canvas.width / aspectRatio;
+
+            // CSS handles the display scaling (width/height 100%)
+
+            // Recalculate paddle position based on internal resolution
+            paddleWidth = canvas.width * PADDLE_WIDTH_PERCENT;
+            paddleX = (canvas.width - paddleWidth) / 2;
+
+            // If playing, restart the game with current settings to adjust block/diamond positions
+            if (gameState === 'playing') {
+                console.log("Resized while playing - restarting level");
+                resetGame(); // This will recreate blocks/diamond/ball for the new size
+            } else if (gameState === 'menu') {
+                 // If in menu, just clear and maybe redraw static elements
+                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                 // No need to recreate game objects yet
+            } else {
+                 // If game over/win, clear and show the message overlay correctly
+                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                 // The message overlay is positioned via CSS, so it should adapt
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Initial Setup ---
+        function init() {
+            console.log("Initializing Game");
+            resizeCanvas(); // Set initial size
+            showMainMenu(); // Start at the main menu
+             // Draw initial empty canvas state (or menu background)
+             draw();
+        }
+
+        // Wait for the font to load before initializing, or things might size incorrectly
+        document.fonts.ready.then(() => {
+            init();
+        });
+
+        // Fallback if font loading API isn't fully supported or fails
+        window.onload = () => {
+             // Check if init already ran
+             if (gameState === 'menu' && mainMenu.style.display !== 'flex') {
+                 console.log("Fallback init on window.onload");
+                 init();
+             }
+         };
+
+    </script>
+</body>
+</html>
